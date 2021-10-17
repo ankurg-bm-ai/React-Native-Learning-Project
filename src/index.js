@@ -9,6 +9,7 @@ import {Provider} from 'react-redux';
 
 import BillScreen from './features/Bill';
 import CalculatorScreen from './features/Calculator';
+import Loading from './features/Loading';
 import {
   NativeBaseProvider,
   extendTheme,
@@ -16,6 +17,7 @@ import {
   Button,
   Text,
   Box,
+  Center,
 } from 'native-base';
 
 const newColorTheme = {
@@ -99,6 +101,17 @@ const LoginScreen = () => {
   );
 };
 
+const LoadingScreen = () => {
+  return (
+    <NativeBaseProvider>
+      <Center flex={1} px="3">
+        <Loading />
+      </Center>
+    </NativeBaseProvider>
+  );
+};
+
+Navigation.registerComponent('Loading', () => LoadingScreen);
 Navigation.registerComponent('Login', () => LoginScreen);
 Navigation.registerComponent('Home', () => BillScreenRedux);
 Navigation.registerComponent('Calculator', () => CalculatorScreenRedux);

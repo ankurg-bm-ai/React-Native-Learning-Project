@@ -1,14 +1,16 @@
 import {createSlice} from '@reduxjs/toolkit';
-import demoBillsList from './demoBills.json';
+import firestore from '@react-native-firebase/firestore';
 
 // The Initial Index of the Bills
-let initialCount = demoBillsList.length;
+
+const ref = firestore().collection('Bills');
 
 // This is the Initial State
 const initialState = {
-  listOfBills: demoBillsList,
+  listOfBills: [],
   category: '',
   monthlyBudget: 0,
+  loading: true,
 };
 
 // Creating a BillSlice with the reducers and initialState
@@ -18,43 +20,63 @@ export const billSlice = createSlice({
   reducers: {
     // This reducer will create a new Bill and add it to the array
     addNewBill: (state, action) => {
-      state.listOfBills.push({
-        ...action.payload,
-        id: ++initialCount,
-      });
+      ref
+        .add({
+          ...action.payload,
+        })
+        .then(() => {
+          alert('Bill Has Been Successfully Added');
+        });
     },
+
     // This reducer will edit an existing Bill
     editExistingBill: (state, action) => {
-      const index = state.listOfBills.findIndex(
-        bill => bill.id === action.payload.id,
-      );
+      const {description, category, amount, date, id} = action.payload;
 
-      const {description, category, amount, date} = action.payload;
-
-      state.listOfBills[index].description = description;
-      state.listOfBills[index].category = category;
-      state.listOfBills[index].amount = amount;
-      state.listOfBills[index].date = date;
+      ref
+        .doc(id)
+        .update({
+          description,
+          category,
+          amount,
+          date,
+        })
+        .then(() => {
+          alert('The Bill has been updated!');
+        });
     },
+
     // This reducer will delete an existing bill
     deleteExistingBill: (state, action) => {
-      const index = state.listOfBills.findIndex(
-        bill => bill.id === action.payload,
-      );
-
-      state.listOfBills.splice(index, 1);
+      ref
+        .doc(action.payload)
+        .delete()
+        .then(() => {
+          alert('The Bill has been Deleted!');
+        });
     },
+
     // This reducer will set a category for the filter
     setCategory: (state, action) => {
       state.category = action.payload;
     },
+
     // This reducer will reset the category filter
     removeCategory: state => {
       state.category = '';
     },
+
     // This reducer will help to set the monthly budget
     setMonthlyBudget: (state, action) => {
       state.monthlyBudget = action.payload;
+    },
+
+    setBills: (state, action) => {
+      state.listOfBills = action.payload;
+    },
+
+    setLoading: (state, action) => {
+      state.loading = action.payload;
     },
   },
 });
@@ -66,6 +88,8 @@ export const {
   setCategory,
   removeCategory,
   setMonthlyBudget,
+  setBills,
+  setLoading,
 } = billSlice.actions;
 
 // This function helps us to show all the bills on the basis of filters
@@ -112,5 +136,7 @@ export const showCategories = state => {
 
   return categories;
 };
+
+export const showLoading = state => state.bill.loading;
 
 export default billSlice.reducer;

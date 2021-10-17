@@ -1,7 +1,19 @@
-import React, {useState} from 'react';
-import {View, Text, Modal, FlatList, Button, Input, Heading} from 'native-base';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  FlatList,
+  Button,
+  Input,
+  Heading,
+  Select,
+  CheckIcon,
+} from 'native-base';
 import {useSelector, useDispatch} from 'react-redux';
 import {Formik} from 'formik';
+import firestore from '@react-native-firebase/firestore';
+import Loading from './Loading';
 
 import {
   addNewBill,
@@ -12,6 +24,9 @@ import {
   setCategory,
   getFilterCatgory,
   removeCategory,
+  setBills,
+  showLoading,
+  setLoading,
 } from './billSlice';
 
 function AddBillModal({isAddModalVisible, handleAddModalClose}) {
@@ -29,9 +44,6 @@ function AddBillModal({isAddModalVisible, handleAddModalClose}) {
   const [validated, setValidated] = useState(false);
 
   // Universal Onchange Handler for the form
-  const handleChange = name => e => {
-    setValues({...values, [name]: e.target.value});
-  };
 
   // Form Submit function
   const clickSubmit = values => {
@@ -112,10 +124,6 @@ function EditBillModal({
   const dispatch = useDispatch();
 
   const [values, setValues] = useState(dataValues);
-
-  const handleChange = name => e => {
-    setValues({...values, [name]: e.target.value});
-  };
 
   const clickSubmit = values => {
     setValues({...values});
@@ -263,10 +271,12 @@ const SingleBill = ({
   </View>
 );
 
-const BillScreen = props => {
+const BillScreen = () => {
   const bills = useSelector(showBills);
-  const categories = useSelector(showCategories);
-  const filterCategory = useSelector(getFilterCatgory);
+  const loading = useSelector(showLoading);
+  const category = useSelector(getFilterCatgory);
+  const listOfCategories = useSelector(showCategories);
+  const ref = firestore().collection('Bills');
 
   const dispatch = useDispatch();
 
@@ -319,40 +329,86 @@ const BillScreen = props => {
     />
   );
 
+  useEffect(() => {
+    ref.onSnapshot(querySnapshot => {
+      const list = [];
+
+      querySnapshot.forEach(doc => {
+        const {description, category, amount, date, id} = doc.data();
+        list.push({
+          id: doc.id,
+          description,
+          category,
+          amount,
+          date,
+          billId: id,
+        });
+      });
+
+      dispatch(setBills(list));
+      dispatch(setLoading(false));
+    });
+  }, []);
+
   return (
     <View>
-      <Button
-        size="sm"
-        variant="subtle"
-        colorScheme="primary"
-        margin="2.5"
-        onPress={handleAddModalShow}>
-        <Text>Add New Bill</Text>
-      </Button>
+      {loading ? (
+        <Loading />
+      ) : (
+        <>
+          <Button
+            size="sm"
+            variant="subtle"
+            colorScheme="primary"
+            margin="2.5"
+            onPress={handleAddModalShow}>
+            <Text>Add New Bill</Text>
+          </Button>
 
-      <FlatList data={bills} renderItem={renderItem} />
-      <AddBillModal
-        isAddModalVisible={isAddModalVisible}
-        handleAddModalClose={handleAddModalClose}
-      />
-      {isEditModalVisible.status ? (
-        <EditBillModal
-          isEditModalVisible={isEditModalVisible}
-          handleEditModalClose={handleEditModalClose}
-          dataValues={bills.find(bill => bill.id === isEditModalVisible.rowId)}
-          rowId={isEditModalVisible.rowId}
-        />
-      ) : (
-        <></>
-      )}
-      {isDeleteModalVisible.status ? (
-        <DeleteBillModal
-          isDeleteModalVisible={isDeleteModalVisible}
-          handleDeleteModalClose={handleDeleteModalClose}
-          rowId={isDeleteModalVisible.rowId}
-        />
-      ) : (
-        <></>
+          <Select
+            selectedValue={category}
+            minWidth="200"
+            accessibilityLabel="Choose Service"
+            placeholder="Choose Service"
+            _selectedItem={{
+              bg: 'teal.600',
+              endIcon: <CheckIcon size="5" />,
+            }}
+            mt={1}
+            onValueChange={itemValue => dispatch(setCategory(itemValue))}>
+            <Select.Item label="All" value="" />
+            {listOfCategories.map(category => {
+              return <Select.Item label={category} value={category} />;
+            })}
+          </Select>
+
+          <FlatList data={bills} renderItem={renderItem} />
+          <AddBillModal
+            isAddModalVisible={isAddModalVisible}
+            handleAddModalClose={handleAddModalClose}
+          />
+          {isEditModalVisible.status ? (
+            <EditBillModal
+              isEditModalVisible={isEditModalVisible}
+              handleEditModalClose={handleEditModalClose}
+              dataValues={bills.find(
+                bill => bill.id === isEditModalVisible.rowId,
+              )}
+              rowId={isEditModalVisible.rowId}
+            />
+          ) : (
+            <></>
+          )}
+          {isDeleteModalVisible.status ? (
+            <DeleteBillModal
+              isDeleteModalVisible={isDeleteModalVisible}
+              handleDeleteModalClose={handleDeleteModalClose}
+              rowId={isDeleteModalVisible.rowId}
+            />
+          ) : (
+            <></>
+          )}
+        </>
       )}
     </View>
   );
